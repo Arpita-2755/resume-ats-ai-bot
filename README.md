@@ -8,6 +8,7 @@ Build an ATS scoring + resume fixing tool in under 2 hours:
 - Offer 3 resume templates: `classic`, `modern`, `minimal`
 - Return downloadable fixed resume (`.docx` or `.pdf`)
 - Optional AI mode (`OPENAI_API_KEY`) for smarter rewrite and suggestions
+- Shows runtime mode in bot response (`Mode` + `AI Applied`) for easy demo validation
 - Bot channels:
   - Telegram (full conversational flow)
   - Discord (command + attachments)
@@ -113,6 +114,8 @@ POST /fix-resume
 4. Upload Resume (text/file)
 5. Receive:
    - ATS score
+   - Mode status (`AI ...` or `Heuristic ...`)
+   - `AI Applied: Yes/No` indicator
    - Improvement suggestions
    - Template options
 6. Click template button and download the fixed resume
@@ -130,6 +133,23 @@ POST /fix-resume
 Attach exactly 2 files in same message:
 - File 1: JD
 - File 2: Resume
+
+### OpenRouter AI Mode (Optional)
+
+Set in `.env`:
+
+```env
+OPENAI_API_KEY=<your_openrouter_key>
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openai/gpt-4o-mini
+OPENROUTER_SITE_URL=http://localhost
+OPENROUTER_APP_NAME=resume-ats-ai-bot
+```
+
+Then restart bot processes.  
+In bot output, verify:
+- `Mode: AI openrouter:...`
+- `AI Applied: Yes`
 
 ### WhatsApp (Twilio Sandbox)
 
@@ -238,4 +258,5 @@ python run.py discord
 - Generated resume includes placeholders like `[add measurable result]` to avoid fake claims.
 - If `OPENAI_API_KEY` is set, AI mode enhances suggestions and resume rewrite. If API fails, it falls back automatically to heuristic mode.
 - You can use OpenRouter by setting `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and a compatible model in `OPENAI_MODEL` (example: `openai/gpt-4o-mini`).
+- AI calls are optional; if provider/model/key is invalid, the app auto-falls back and still completes ATS scoring + resume generation.
 - For production, add auth/rate-limit + persistent storage.
