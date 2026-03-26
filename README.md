@@ -52,6 +52,9 @@ TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.4
+OPENAI_BASE_URL=
+OPENROUTER_SITE_URL=http://localhost
+OPENROUTER_APP_NAME=resume-ats-ai-bot
 OUTPUT_DIR=outputs
 PUBLIC_FILE_BASE_URL=
 ```
@@ -234,4 +237,5 @@ python run.py discord
 - `.doc` parsing is best-effort and depends on availability of `antiword`.
 - Generated resume includes placeholders like `[add measurable result]` to avoid fake claims.
 - If `OPENAI_API_KEY` is set, AI mode enhances suggestions and resume rewrite. If API fails, it falls back automatically to heuristic mode.
+- You can use OpenRouter by setting `OPENAI_BASE_URL=https://openrouter.ai/api/v1` and a compatible model in `OPENAI_MODEL` (example: `openai/gpt-4o-mini`).
 - For production, add auth/rate-limit + persistent storage.
