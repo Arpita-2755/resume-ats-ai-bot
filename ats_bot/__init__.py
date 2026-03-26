@@ -1,0 +1,2 @@
+"""Hackathon ATS bot package."""
+
