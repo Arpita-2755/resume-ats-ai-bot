@@ -8,7 +8,7 @@ from discord.ext import commands
 from ats_bot.bots.common import format_analysis_text
 from ats_bot.config import settings
 from ats_bot.core.ats_engine import analyze_resume_against_jd
-from ats_bot.core.ai_mode import enhance_analysis_if_available
+from ats_bot.core.ai_mode import enhance_analysis_if_available, get_ai_mode_label
 from ats_bot.core.parsers import parse_text_from_bytes
 from ats_bot.core.resume_rewriter import rewrite_resume
 from ats_bot.core.templates import TEMPLATE_STYLES, export_resume_file
@@ -60,8 +60,13 @@ def run_discord_bot() -> None:
             await ctx.send(f"Failed to parse files: {exc}")
             return
 
-        analysis = analyze_resume_against_jd(jd_text, resume_text)
-        analysis = enhance_analysis_if_available(jd_text, resume_text, analysis)
+        base_analysis = analyze_resume_against_jd(jd_text, resume_text)
+        analysis = enhance_analysis_if_available(jd_text, resume_text, base_analysis)
+        ai_applied = (
+            analysis.strengths != base_analysis.strengths
+            or analysis.improvements != base_analysis.improvements
+            or analysis.missing_keywords != base_analysis.missing_keywords
+        )
         improved = rewrite_resume(resume_text, jd_text, analysis=analysis)
         output_format = "pdf" if Path(resume_file.filename).suffix.lower() == ".pdf" else "docx"
 
@@ -74,7 +79,13 @@ def run_discord_bot() -> None:
         )
 
         try:
-            await ctx.send(format_analysis_text(analysis)[:1900])
+            await ctx.send(
+                format_analysis_text(
+                    analysis=analysis,
+                    mode_label=get_ai_mode_label(),
+                    ai_applied=ai_applied,
+                )[:1900]
+            )
             await ctx.send(
                 f"Template selected: {template.title()} | Fixed resume:",
                 file=discord.File(str(output_file)),

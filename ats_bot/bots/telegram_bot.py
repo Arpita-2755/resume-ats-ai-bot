@@ -18,7 +18,7 @@ from telegram.ext import (
 from ats_bot.bots.common import format_analysis_text
 from ats_bot.config import settings
 from ats_bot.core.ats_engine import analyze_resume_against_jd
-from ats_bot.core.ai_mode import enhance_analysis_if_available
+from ats_bot.core.ai_mode import enhance_analysis_if_available, get_ai_mode_label
 from ats_bot.core.parsers import parse_text_from_bytes
 from ats_bot.core.resume_rewriter import rewrite_resume
 from ats_bot.core.templates import export_resume_file
@@ -79,13 +79,24 @@ async def handle_resume(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             output_format = "pdf"
     context.user_data["output_format"] = output_format
 
-    analysis = analyze_resume_against_jd(jd_text, resume_text)
-    analysis = enhance_analysis_if_available(jd_text, resume_text, analysis)
+    base_analysis = analyze_resume_against_jd(jd_text, resume_text)
+    analysis = enhance_analysis_if_available(jd_text, resume_text, base_analysis)
+    ai_applied = (
+        analysis.strengths != base_analysis.strengths
+        or analysis.improvements != base_analysis.improvements
+        or analysis.missing_keywords != base_analysis.missing_keywords
+    )
     improved_resume = rewrite_resume(resume_text, jd_text, analysis=analysis)
     context.user_data["analysis"] = analysis.to_dict()
     context.user_data["improved_resume"] = improved_resume
 
-    await message.reply_text(format_analysis_text(analysis))
+    await message.reply_text(
+        format_analysis_text(
+            analysis=analysis,
+            mode_label=get_ai_mode_label(),
+            ai_applied=ai_applied,
+        )
+    )
     keyboard = InlineKeyboardMarkup(
         [
             [

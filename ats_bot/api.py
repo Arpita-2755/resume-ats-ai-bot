@@ -23,6 +23,8 @@ class AnalyzeResponse(BaseModel):
     score: float
     keyword_coverage: float
     breakdown: dict[str, float]
+    mode: str
+    ai_applied: bool
     matched_keywords: list[str]
     missing_keywords: list[str]
     strengths: list[str]
@@ -50,8 +52,13 @@ async def analyze(
     final_jd = await _resolve_text_input(jd_text, jd_file, "JD")
     final_resume = await _resolve_text_input(resume_text, resume_file, "Resume")
 
-    analysis = analyze_resume_against_jd(final_jd, final_resume)
-    analysis = enhance_analysis_if_available(final_jd, final_resume, analysis)
+    base_analysis = analyze_resume_against_jd(final_jd, final_resume)
+    analysis = enhance_analysis_if_available(final_jd, final_resume, base_analysis)
+    ai_applied = (
+        analysis.strengths != base_analysis.strengths
+        or analysis.improvements != base_analysis.improvements
+        or analysis.missing_keywords != base_analysis.missing_keywords
+    )
     improved_resume = rewrite_resume(final_resume, final_jd, analysis=analysis)
     preview = "\n".join(improved_resume.splitlines()[:18])
 
@@ -59,6 +66,8 @@ async def analyze(
         score=analysis.score,
         keyword_coverage=analysis.keyword_coverage,
         breakdown=analysis.breakdown,
+        mode="ai" if ai_applied else "heuristic",
+        ai_applied=ai_applied,
         matched_keywords=analysis.matched_keywords,
         missing_keywords=analysis.missing_keywords,
         strengths=analysis.strengths,

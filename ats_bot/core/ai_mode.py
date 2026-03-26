@@ -20,6 +20,15 @@ def is_ai_mode_available() -> bool:
     return bool(os.getenv("OPENAI_API_KEY")) and OpenAI is not None
 
 
+def get_ai_mode_label() -> str:
+    if not os.getenv("OPENAI_API_KEY", "").strip():
+        return "Heuristic (no AI key)"
+    provider, model = _resolve_provider_and_model()
+    if OpenAI is None:
+        return f"Configured {provider}:{model} (openai package missing)"
+    return f"AI {provider}:{model}"
+
+
 def enhance_analysis_if_available(
     jd_text: str,
     resume_text: str,
@@ -138,11 +147,8 @@ def _get_client_provider_model() -> tuple[OpenAI | None, Literal["openai", "open
     if not api_key:
         return None, "openai", ""
 
+    provider, model = _resolve_provider_and_model()
     base_url = os.getenv("OPENAI_BASE_URL", "").strip()
-    provider: Literal["openai", "openrouter"] = "openrouter" if "openrouter.ai" in base_url else "openai"
-
-    default_model = "openai/gpt-4o-mini" if provider == "openrouter" else "gpt-5.4"
-    model = os.getenv("OPENAI_MODEL", default_model).strip() or default_model
 
     if provider == "openrouter":
         headers = {
@@ -157,6 +163,14 @@ def _get_client_provider_model() -> tuple[OpenAI | None, Literal["openai", "open
             client = OpenAI(api_key=api_key)
 
     return client, provider, model
+
+
+def _resolve_provider_and_model() -> tuple[Literal["openai", "openrouter"], str]:
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip()
+    provider: Literal["openai", "openrouter"] = "openrouter" if "openrouter.ai" in base_url else "openai"
+    default_model = "openai/gpt-4o-mini" if provider == "openrouter" else "gpt-5.4"
+    model = os.getenv("OPENAI_MODEL", default_model).strip() or default_model
+    return provider, model
 
 
 def _extract_chat_content(completion) -> str | None:
@@ -200,4 +214,3 @@ def _limit_list(value, max_len: int) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()][:max_len]
-
