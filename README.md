@@ -200,26 +200,27 @@ Open PRs into `codex/hackathon-ats-bot`, then merge to `main`.
 ### Render / Railway
 
 1. Connect GitHub repo
-2. Build command:
+2. If using Render Blueprint, keep `render.yaml` as-is and create service from repo
+3. Build command:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Start command (API):
+4. Start command (API):
 
 ```bash
 python run.py api --host 0.0.0.0 --port $PORT
 ```
 
-4. Add env vars from `.env`
-5. For Telegram bot, deploy as a **worker service** with:
+5. Add env vars from `.env`
+6. For Telegram bot, deploy as a **worker service** with:
 
 ```bash
 python run.py telegram
 ```
 
-6. For Discord bot, deploy as another worker:
+7. For Discord bot, deploy as another worker:
 
 ```bash
 python run.py discord
@@ -230,4 +231,3 @@ python run.py discord
 - `.doc` parsing is best-effort and depends on availability of `antiword`.
 - Generated resume includes placeholders like `[add measurable result]` to avoid fake claims.
 - For production, add auth/rate-limit + persistent storage.
-

@@ -1,0 +1,14 @@
+services:
+  - type: worker
+    name: resume-ats-telegram-bot
+    runtime: python
+    plan: free
+    branch: codex/hackathon-ats-bot
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py telegram
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OUTPUT_DIR
+        value: outputs
+
