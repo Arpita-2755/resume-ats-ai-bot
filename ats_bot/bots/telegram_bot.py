@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update
@@ -22,6 +23,7 @@ from ats_bot.core.resume_rewriter import rewrite_resume
 from ats_bot.core.templates import export_resume_file
 
 WAITING_JD, WAITING_RESUME = range(2)
+logger = logging.getLogger(__name__)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -32,6 +34,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Step 2: send resume file/text\n"
         "Then choose one of 3 CV templates to download the fixed resume."
     )
+
+
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    del context
+    await update.message.reply_text("Bot is live. Send /ats to begin.")
 
 
 async def ats_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -129,6 +136,15 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+async def fallback_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    del context
+    if update.message:
+        await update.message.reply_text(
+            "Send /ats to start ATS scoring.\n"
+            "Flow: JD first, then Resume, then choose template."
+        )
+
+
 async def _extract_text_from_message(message, context: ContextTypes.DEFAULT_TYPE) -> str:
     if message.document:
         tg_file = await context.bot.get_file(message.document.file_id)
@@ -148,6 +164,10 @@ def run_telegram_bot() -> None:
     if not settings.telegram_bot_token:
         raise RuntimeError("Missing TELEGRAM_BOT_TOKEN in environment.")
 
+    logging.basicConfig(
+        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+        level=logging.INFO,
+    )
     application = ApplicationBuilder().token(settings.telegram_bot_token).build()
     conversation = ConversationHandler(
         entry_points=[CommandHandler("ats", ats_start)],
@@ -162,7 +182,9 @@ def run_telegram_bot() -> None:
     )
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("ping", ping))
     application.add_handler(conversation)
     application.add_handler(CallbackQueryHandler(handle_template_choice, pattern=r"^tpl:"))
+    application.add_handler(MessageHandler(filters.TEXT | filters.Document.ALL, fallback_message))
+    logger.info("Telegram bot polling started.")
     application.run_polling()
-
