@@ -109,25 +109,30 @@ async def handle_template_choice(update: Update, context: ContextTypes.DEFAULT_T
         await query.message.reply_text("No analyzed resume found. Send /ats first.")
         return
 
-    output_format = context.user_data.get("output_format", "docx")
-    if output_format not in {"docx", "pdf"}:
-        output_format = "docx"
+    primary_format = context.user_data.get("output_format", "docx")
+    if primary_format not in {"docx", "pdf"}:
+        primary_format = "docx"
+    secondary_format = "pdf" if primary_format == "docx" else "docx"
 
-    output_file = export_resume_file(
-        resume_text=improved_resume,
-        style=style,
-        output_format=output_format,
-        output_dir=settings.output_dir,
-        base_filename=f"telegram_{query.from_user.id}",
-    )
+    generated_files = []
     try:
-        with output_file.open("rb") as file_handle:
-            await query.message.reply_document(
-                document=InputFile(file_handle, filename=output_file.name),
-                caption=f"Fixed resume generated with {style.title()} template.",
+        for output_format in [primary_format, secondary_format]:
+            output_file = export_resume_file(
+                resume_text=improved_resume,
+                style=style,
+                output_format=output_format,
+                output_dir=settings.output_dir,
+                base_filename=f"telegram_{query.from_user.id}",
             )
+            generated_files.append(output_file)
+            with output_file.open("rb") as file_handle:
+                await query.message.reply_document(
+                    document=InputFile(file_handle, filename=output_file.name),
+                    caption=f"Fixed resume ({output_format.upper()}) with {style.title()} template.",
+                )
     finally:
-        output_file.unlink(missing_ok=True)
+        for generated_file in generated_files:
+            generated_file.unlink(missing_ok=True)
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

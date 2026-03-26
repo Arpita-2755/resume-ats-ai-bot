@@ -6,7 +6,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt, RGBColor
+from docx.shared import Inches, Pt, RGBColor
 from reportlab.lib.pagesizes import LETTER
 from reportlab.pdfgen import canvas
 
@@ -21,7 +21,7 @@ TEMPLATE_STYLES = {
         "pdf_font": "Helvetica",
     },
     "modern": {
-        "font": "Georgia",
+        "font": "Cambria",
         "name_size": 22,
         "body_size": 11,
         "heading_color": RGBColor(0x00, 0x5A, 0x9C),
@@ -60,7 +60,6 @@ def export_resume_file(
         _export_pdf(data, style, output_path)
     else:
         raise ValueError("output_format must be 'docx' or 'pdf'")
-
     return output_path
 
 
@@ -69,10 +68,10 @@ def _export_docx(data, style: str, output_path: Path) -> None:
     doc = Document()
 
     for section in doc.sections:
-        section.top_margin = Pt(40)
-        section.bottom_margin = Pt(40)
-        section.left_margin = Pt(40)
-        section.right_margin = Pt(40)
+        section.top_margin = Inches(0.6)
+        section.bottom_margin = Inches(0.6)
+        section.left_margin = Inches(0.7)
+        section.right_margin = Inches(0.7)
 
     normal_style = doc.styles["Normal"]
     normal_style.font.name = style_cfg["font"]
@@ -80,6 +79,7 @@ def _export_docx(data, style: str, output_path: Path) -> None:
 
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.paragraph_format.space_after = Pt(3)
     title_run = title.add_run(data.name)
     title_run.bold = True
     title_run.font.size = Pt(style_cfg["name_size"])
@@ -89,20 +89,39 @@ def _export_docx(data, style: str, output_path: Path) -> None:
     if contact_bits:
         contact = doc.add_paragraph(" | ".join(contact_bits))
         contact.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        contact.runs[0].italic = True
+        contact.paragraph_format.space_after = Pt(6)
+
+    divider = doc.add_paragraph("-" * 90)
+    divider.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    divider.paragraph_format.space_after = Pt(8)
 
     for section_name, lines in data.sections.items():
+        cleaned_lines = _clean_lines(lines)
+        if not cleaned_lines:
+            continue
+
         heading = doc.add_paragraph()
+        heading.paragraph_format.space_before = Pt(6)
+        heading.paragraph_format.space_after = Pt(4)
         heading_run = heading.add_run(section_name.upper())
         heading_run.bold = True
         heading_run.font.color.rgb = style_cfg["heading_color"]
         heading_run.font.size = Pt(style_cfg["body_size"] + 1)
 
-        for line in lines:
-            text = line.lstrip("-*\u2022 ").strip()
-            if not text:
-                continue
-            p = doc.add_paragraph(text, style="List Bullet")
-            p.paragraph_format.space_after = Pt(4)
+        if section_name == "summary":
+            paragraph = doc.add_paragraph(" ".join(cleaned_lines))
+            paragraph.paragraph_format.space_after = Pt(4)
+        elif section_name == "skills":
+            skill_parts = []
+            for line in cleaned_lines:
+                skill_parts.extend([part.strip() for part in line.split(",") if part.strip()])
+            paragraph = doc.add_paragraph(" | ".join(dict.fromkeys(skill_parts)))
+            paragraph.paragraph_format.space_after = Pt(4)
+        else:
+            for line in cleaned_lines:
+                bullet = doc.add_paragraph(line, style="List Bullet")
+                bullet.paragraph_format.space_after = Pt(2)
 
     doc.save(str(output_path))
 
@@ -110,42 +129,77 @@ def _export_docx(data, style: str, output_path: Path) -> None:
 def _export_pdf(data, style: str, output_path: Path) -> None:
     style_cfg = TEMPLATE_STYLES[style]
     c = canvas.Canvas(str(output_path), pagesize=LETTER)
-    width, height = LETTER
-    x = 52
+    _, height = LETTER
+    x = 50
     y = height - 50
 
     c.setFont(style_cfg["pdf_font"], 18)
     c.drawString(x, y, data.name)
-    y -= 20
+    y -= 18
 
     contact_bits = [bit for bit in [data.email, data.phone] if bit]
     contact_bits.extend(data.links[:2])
     if contact_bits:
         c.setFont(style_cfg["pdf_font"], 10)
         c.drawString(x, y, " | ".join(contact_bits))
-        y -= 18
+        y -= 14
+
+    c.line(x, y, 560, y)
+    y -= 12
 
     for section_name, lines in data.sections.items():
+        cleaned_lines = _clean_lines(lines)
+        if not cleaned_lines:
+            continue
+
         if y < 90:
             c.showPage()
             y = height - 50
+
         c.setFont(style_cfg["pdf_font"], 12)
         c.drawString(x, y, section_name.upper())
-        y -= 14
+        y -= 12
+        c.line(x, y, 560, y)
+        y -= 10
+
         c.setFont(style_cfg["pdf_font"], 10)
-        for line in lines:
-            clean = line.lstrip("-*\u2022 ").strip()
-            if not clean:
-                continue
-            wrapped = textwrap.wrap(clean, width=95)
-            for chunk in wrapped:
-                if y < 70:
-                    c.showPage()
-                    y = height - 50
-                    c.setFont(style_cfg["pdf_font"], 10)
-                c.drawString(x + 8, y, f"- {chunk}")
-                y -= 12
-        y -= 6
+        if section_name == "summary":
+            y = _draw_wrapped(c, " ".join(cleaned_lines), x, y, prefix="", width=92)
+            y -= 4
+        elif section_name == "skills":
+            skill_parts = []
+            for line in cleaned_lines:
+                skill_parts.extend([part.strip() for part in line.split(",") if part.strip()])
+            y = _draw_wrapped(c, ", ".join(dict.fromkeys(skill_parts)), x, y, prefix="", width=92)
+            y -= 4
+        else:
+            for line in cleaned_lines:
+                y = _draw_wrapped(c, line, x + 6, y, prefix="- ", width=88)
+            y -= 3
 
     c.save()
+
+
+def _draw_wrapped(
+    c: canvas.Canvas,
+    text: str,
+    x: int,
+    y: int,
+    prefix: str,
+    width: int,
+) -> int:
+    wrapped = textwrap.wrap(text, width=width)
+    for index, chunk in enumerate(wrapped):
+        c.drawString(x, y, (prefix if index == 0 else "  ") + chunk)
+        y -= 12
+    return y
+
+
+def _clean_lines(lines: list[str]) -> list[str]:
+    output: list[str] = []
+    for line in lines:
+        clean = line.lstrip("-*\u2022 ").strip()
+        if clean:
+            output.append(clean)
+    return output
 

@@ -30,39 +30,57 @@ def rewrite_resume(
     missing_keywords = analysis.missing_keywords[:10]
     keyword_cycle = itertools.cycle(missing_keywords) if missing_keywords else None
 
-    for section_name, lines in list(data.sections.items()):
-        if section_name in {"experience", "projects"}:
-            updated: list[str] = []
-            for line in lines:
-                keyword = next(keyword_cycle) if keyword_cycle else None
-                updated.append(_improve_bullet(line, keyword))
-            data.sections[section_name] = updated
+    role = _guess_role(jd_text)
+    key_strengths = analysis.matched_keywords[:3] or ["backend systems", "API development"]
+    summary_line = (
+        f"Results-driven {role} with hands-on experience in {', '.join(key_strengths)} "
+        "and delivering measurable business impact."
+    )
+    data.sections["summary"] = [summary_line]
+
+    for section_name in {"experience", "projects"}:
+        lines = data.sections.get(section_name, [])
+        if not lines:
+            continue
+        updated = []
+        for line in lines:
+            keyword = next(keyword_cycle) if keyword_cycle else None
+            updated.append(_improve_bullet(line, keyword))
+        data.sections[section_name] = updated
+
+    if not data.sections.get("experience") and data.sections.get("projects"):
+        data.sections["experience"] = data.sections["projects"][:2]
 
     skills_lines = data.sections.get("skills", [])
-    skills_blob = " ".join(skills_lines).lower()
-    missing_for_skills = [kw for kw in missing_keywords if kw not in skills_blob][:8]
-    if missing_for_skills:
-        if skills_lines:
-            skills_lines.append("Targeted JD Keywords: " + ", ".join(missing_for_skills))
-        else:
-            skills_lines = ["Targeted JD Keywords: " + ", ".join(missing_for_skills)]
-        data.sections["skills"] = skills_lines
+    merged_skills = _merge_skills(skills_lines, analysis.matched_keywords, missing_keywords)
+    if merged_skills:
+        data.sections["skills"] = [", ".join(merged_skills)]
 
-    summary_lines = data.sections.get("summary", [])
-    summary_text = " ".join(summary_lines).lower()
-    summary_additions = [kw for kw in missing_keywords[:3] if kw not in summary_text]
-    if summary_additions:
-        sentence = "Focused on " + ", ".join(summary_additions) + " aligned to role expectations."
-        summary_lines.append(sentence)
-        data.sections["summary"] = summary_lines
+    if "projects" not in data.sections:
+        data.sections["projects"] = [
+            "- Built a role-aligned project showcasing practical use of key JD technologies."
+        ]
 
     return resume_data_to_text(data)
+
+
+def _guess_role(jd_text: str) -> str:
+    patterns = [
+        r"(?:hiring|seeking|looking for)\s+(?:an?\s+)?([a-zA-Z0-9\-/\s]+?)(?:\s+with|\s+who|\s+to|[.,\n])",
+        r"(?:position|role)\s*:\s*([a-zA-Z0-9\-/\s]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, jd_text.lower())
+        if match:
+            role = re.sub(r"\s+", " ", match.group(1)).strip()
+            return role.title()
+    return "Software Professional"
 
 
 def _improve_bullet(line: str, keyword: str | None) -> str:
     cleaned = line.strip().lstrip("-*\u2022").strip()
     if not cleaned:
-        return "- Led a key initiative aligned to business goals."
+        return "- Led a high-impact initiative aligned with business goals."
 
     words = cleaned.split()
     first_word = re.sub(r"[^A-Za-z]", "", words[0]).lower() if words else ""
@@ -73,8 +91,20 @@ def _improve_bullet(line: str, keyword: str | None) -> str:
         cleaned = cleaned[0].upper() + cleaned[1:]
 
     if keyword and keyword.lower() not in cleaned.lower():
-        cleaned += f" using {keyword}"
+        cleaned += f" while leveraging {keyword}"
     if not re.search(r"\b\d+(?:\.\d+)?%?\b", cleaned):
-        cleaned += "; impact: [add measurable result]"
+        cleaned += " (add measurable impact, e.g., +25% performance)"
 
     return f"- {cleaned}"
+
+
+def _merge_skills(existing_skill_lines: list[str], matched: list[str], missing: list[str]) -> list[str]:
+    raw = ", ".join(existing_skill_lines)
+    current = {skill.strip() for skill in re.split(r"[,\n|]", raw) if skill.strip()}
+    additions = matched[:6] + missing[:6]
+    for skill in additions:
+        if len(current) >= 18:
+            break
+        current.add(skill)
+    return sorted(current, key=lambda x: x.lower())
+

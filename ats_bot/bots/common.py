@@ -7,9 +7,20 @@ def format_analysis_text(analysis: ATSAnalysis) -> str:
     lines = [
         f"ATS Score: {analysis.score}/10",
         f"Keyword Coverage: {int(analysis.keyword_coverage * 100)}%",
-        "",
-        "Strengths:",
     ]
+    if analysis.breakdown:
+        lines.append(
+            "Breakdown: "
+            + ", ".join(
+                [f"{key.replace('_', ' ').title()}={value}" for key, value in analysis.breakdown.items()]
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "Strengths:",
+        ]
+    )
     lines.extend([f"- {item}" for item in analysis.strengths[:4]])
     lines.append("")
     lines.append("Improvements:")
@@ -18,4 +29,3 @@ def format_analysis_text(analysis: ATSAnalysis) -> str:
         lines.append("")
         lines.append("Missing Keywords (Top): " + ", ".join(analysis.missing_keywords[:8]))
     return "\n".join(lines)
-

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 class ATSAnalysis:
     score: float
     keyword_coverage: float
+    breakdown: dict[str, float] = field(default_factory=dict)
     matched_keywords: list[str] = field(default_factory=list)
     missing_keywords: list[str] = field(default_factory=list)
     strengths: list[str] = field(default_factory=list)
@@ -16,6 +17,7 @@ class ATSAnalysis:
         return {
             "score": self.score,
             "keyword_coverage": self.keyword_coverage,
+            "breakdown": self.breakdown,
             "matched_keywords": self.matched_keywords,
             "missing_keywords": self.missing_keywords,
             "strengths": self.strengths,
@@ -30,4 +32,3 @@ class ResumeData:
     phone: str | None
     links: list[str]
     sections: dict[str, list[str]]
-

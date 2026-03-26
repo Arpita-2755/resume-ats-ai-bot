@@ -21,6 +21,7 @@ app.include_router(whatsapp_router)
 class AnalyzeResponse(BaseModel):
     score: float
     keyword_coverage: float
+    breakdown: dict[str, float]
     matched_keywords: list[str]
     missing_keywords: list[str]
     strengths: list[str]
@@ -55,6 +56,7 @@ async def analyze(
     return AnalyzeResponse(
         score=analysis.score,
         keyword_coverage=analysis.keyword_coverage,
+        breakdown=analysis.breakdown,
         matched_keywords=analysis.matched_keywords,
         missing_keywords=analysis.missing_keywords,
         strengths=analysis.strengths,
@@ -121,4 +123,3 @@ async def _resolve_text_input(
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"Could not parse {label} file: {exc}") from exc
     raise HTTPException(status_code=400, detail=f"{label} input is required.")
-

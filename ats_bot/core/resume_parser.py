@@ -79,13 +79,29 @@ def resume_data_to_text(data: ResumeData) -> str:
         output_lines.append(" | ".join(contact))
         output_lines.append("")
 
+    bullet_sections = {"experience", "projects", "education", "certifications", "other"}
     for section, items in data.sections.items():
         output_lines.append(section.title())
-        for item in items:
-            if item.startswith(("-", "*", "\u2022")):
-                output_lines.append(item)
-            else:
-                output_lines.append(f"- {item}")
+        if section == "skills":
+            skills = []
+            for item in items:
+                parts = [part.strip() for part in re.split(r"[,\n|]", item) if part.strip()]
+                skills.extend(parts)
+            output_lines.append(", ".join(dict.fromkeys(skills)))
+        elif section in bullet_sections:
+            for item in items:
+                item = item.strip()
+                if not item:
+                    continue
+                if item.startswith(("-", "*", "\u2022")):
+                    output_lines.append(item)
+                else:
+                    output_lines.append(f"- {item}")
+        else:
+            for item in items:
+                item = item.strip()
+                if item:
+                    output_lines.append(item)
         output_lines.append("")
 
     return "\n".join(output_lines).strip()
@@ -108,4 +124,5 @@ def _is_contact_line(line: str) -> bool:
         return True
     if "linkedin.com" in line.lower() or "github.com" in line.lower():
         return True
-    return bool(re.search(r"\d{6,}", re.sub(r"\D", "", line)))
+    digits = re.sub(r"\D", "", line)
+    return 10 <= len(digits) <= 15
