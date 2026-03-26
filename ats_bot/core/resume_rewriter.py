@@ -4,6 +4,7 @@ import itertools
 import re
 
 from .ats_engine import analyze_resume_against_jd
+from .ai_mode import rewrite_resume_with_ai_if_available
 from .models import ATSAnalysis
 from .resume_parser import parse_resume_text, resume_data_to_text
 
@@ -26,6 +27,10 @@ def rewrite_resume(
     analysis: ATSAnalysis | None = None,
 ) -> str:
     analysis = analysis or analyze_resume_against_jd(jd_text, resume_text)
+    ai_rewrite = rewrite_resume_with_ai_if_available(jd_text, resume_text, analysis)
+    if ai_rewrite:
+        return ai_rewrite
+
     data = parse_resume_text(resume_text)
     missing_keywords = analysis.missing_keywords[:10]
     keyword_cycle = itertools.cycle(missing_keywords) if missing_keywords else None
@@ -107,4 +112,3 @@ def _merge_skills(existing_skill_lines: list[str], matched: list[str], missing: 
             break
         current.add(skill)
     return sorted(current, key=lambda x: x.lower())
-

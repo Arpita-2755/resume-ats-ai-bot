@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from ats_bot.bots.whatsapp_webhook import router as whatsapp_router
 from ats_bot.config import settings
 from ats_bot.core.ats_engine import analyze_resume_against_jd
+from ats_bot.core.ai_mode import enhance_analysis_if_available
 from ats_bot.core.parsers import parse_text_from_bytes
 from ats_bot.core.resume_rewriter import rewrite_resume
 from ats_bot.core.templates import TEMPLATE_STYLES, export_resume_file
@@ -50,6 +51,7 @@ async def analyze(
     final_resume = await _resolve_text_input(resume_text, resume_file, "Resume")
 
     analysis = analyze_resume_against_jd(final_jd, final_resume)
+    analysis = enhance_analysis_if_available(final_jd, final_resume, analysis)
     improved_resume = rewrite_resume(final_resume, final_jd, analysis=analysis)
     preview = "\n".join(improved_resume.splitlines()[:18])
 
@@ -85,6 +87,7 @@ async def fix_resume(
     final_resume = await _resolve_text_input(resume_text, resume_file, "Resume")
 
     analysis = analyze_resume_against_jd(final_jd, final_resume)
+    analysis = enhance_analysis_if_available(final_jd, final_resume, analysis)
     improved_resume = rewrite_resume(final_resume, final_jd, analysis=analysis)
     output_file = export_resume_file(
         resume_text=improved_resume,

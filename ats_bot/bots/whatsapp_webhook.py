@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request, Response
 from ats_bot.bots.common import format_analysis_text
 from ats_bot.config import settings
 from ats_bot.core.ats_engine import analyze_resume_against_jd
+from ats_bot.core.ai_mode import enhance_analysis_if_available
 from ats_bot.core.parsers import parse_text_from_bytes
 
 router = APIRouter(tags=["whatsapp"])
@@ -45,6 +46,7 @@ async def whatsapp_webhook(request: Request) -> Response:
         return _twiml_response(usage)
 
     analysis = analyze_resume_against_jd(jd_text, resume_text)
+    analysis = enhance_analysis_if_available(jd_text, resume_text, analysis)
     summary = format_analysis_text(analysis)
     if analysis.score < 7:
         summary += (
@@ -92,4 +94,3 @@ def _twiml_response(text: str) -> Response:
         f"<Response><Message>{safe_text}</Message></Response>"
     )
     return Response(content=payload, media_type="application/xml")
-

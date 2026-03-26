@@ -7,6 +7,7 @@ Build an ATS scoring + resume fixing tool in under 2 hours:
 - Auto-generate a fixed resume aligned to JD
 - Offer 3 resume templates: `classic`, `modern`, `minimal`
 - Return downloadable fixed resume (`.docx` or `.pdf`)
+- Optional AI mode (`OPENAI_API_KEY`) for smarter rewrite and suggestions
 - Bot channels:
   - Telegram (full conversational flow)
   - Discord (command + attachments)
@@ -49,6 +50,8 @@ TELEGRAM_BOT_TOKEN=...
 DISCORD_BOT_TOKEN=...
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4
 OUTPUT_DIR=outputs
 PUBLIC_FILE_BASE_URL=
 ```
@@ -230,4 +233,5 @@ python run.py discord
 
 - `.doc` parsing is best-effort and depends on availability of `antiword`.
 - Generated resume includes placeholders like `[add measurable result]` to avoid fake claims.
+- If `OPENAI_API_KEY` is set, AI mode enhances suggestions and resume rewrite. If API fails, it falls back automatically to heuristic mode.
 - For production, add auth/rate-limit + persistent storage.

@@ -8,6 +8,7 @@ from discord.ext import commands
 from ats_bot.bots.common import format_analysis_text
 from ats_bot.config import settings
 from ats_bot.core.ats_engine import analyze_resume_against_jd
+from ats_bot.core.ai_mode import enhance_analysis_if_available
 from ats_bot.core.parsers import parse_text_from_bytes
 from ats_bot.core.resume_rewriter import rewrite_resume
 from ats_bot.core.templates import TEMPLATE_STYLES, export_resume_file
@@ -24,6 +25,12 @@ def run_discord_bot() -> None:
     @bot.event
     async def on_ready() -> None:
         print(f"Discord bot logged in as {bot.user}")
+
+    @bot.event
+    async def on_command_error(ctx: commands.Context, error: Exception) -> None:
+        if isinstance(error, commands.CommandNotFound):
+            return
+        await ctx.send(f"Command error: {error}")
 
     @bot.command(name="help_ats")
     async def help_ats(ctx: commands.Context) -> None:
@@ -54,6 +61,7 @@ def run_discord_bot() -> None:
             return
 
         analysis = analyze_resume_against_jd(jd_text, resume_text)
+        analysis = enhance_analysis_if_available(jd_text, resume_text, analysis)
         improved = rewrite_resume(resume_text, jd_text, analysis=analysis)
         output_format = "pdf" if Path(resume_file.filename).suffix.lower() == ".pdf" else "docx"
 

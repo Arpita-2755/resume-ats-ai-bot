@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .ats_engine import ATSAnalysis, analyze_resume_against_jd
+from .ai_mode import enhance_analysis_if_available
 from .resume_rewriter import rewrite_resume
 from .templates import export_resume_file
 
@@ -15,6 +16,7 @@ def run_ats_pipeline(
     output_dir: str | Path = "outputs",
 ) -> tuple[ATSAnalysis, str, Path]:
     analysis = analyze_resume_against_jd(jd_text, resume_text)
+    analysis = enhance_analysis_if_available(jd_text, resume_text, analysis)
     improved_resume_text = rewrite_resume(resume_text, jd_text, analysis=analysis)
     file_path = export_resume_file(
         resume_text=improved_resume_text,
@@ -23,4 +25,3 @@ def run_ats_pipeline(
         output_dir=Path(output_dir),
     )
     return analysis, improved_resume_text, file_path
-
